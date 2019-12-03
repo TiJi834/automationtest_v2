@@ -6,17 +6,20 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import io.restassured.path.xml.XmlPath;
 import io.restassured.response.Response;
 import net.andreinc.mockneat.MockNeat;
 
 public class TestAPI {
 
 	@Test
-	void test() {
+	void test_Register_User() {
 		String randomEmail = MockNeat.threadLocal().emails().val();
 		String randomPassword = MockNeat.threadLocal().passwords().val();
 		String randomFullName = MockNeat.threadLocal().names().val();
@@ -33,6 +36,14 @@ public class TestAPI {
 		Response response = given().contentType(ContentType.JSON).body(postContent)
 				.post("http://restapi.demoqa.com/customer/register");
 		response.then().statusCode(201);
+	}
+
+	@Test
+	void test_Authentication() {
+		Response response = given().auth().preemptive().basic("ToolsQA", "TestPassword").when()
+				.get("http://restapi.demoqa.com/authentication/CheckForAuthentication");
+		response.then().statusCode(200);
+		System.out.println(response.getBody().asString());
 	}
 
 	@Test
@@ -70,6 +81,20 @@ public class TestAPI {
 		// located in Australia
 		given().pathParam("circuitId", circuitId).when().get("http://ergast.com/api/f1/circuits/{circuitId}.json")
 				.then().assertThat().body("MRData.CircuitTable.Circuits.Location[0].country", equalTo("Australia"));
+	}
+
+	@Test
+	public void test_GoogleMaps_XML_Response() {
+		RestAssured.baseURI = "https://maps.googleapis.com";
+		String googlemapsURL = "/maps/api/place/nearbysearch/xml?location=-33.8670522,151.1957362&radius=1500&type=supermarket&key=AIzaSyCuvVtEjxi5WIh50mliS0j2QP1B1BcRAy4";
+
+		Response googleMapsResponse = given().get(googlemapsURL);
+		String googleMapsResponseString = googleMapsResponse.andReturn().asString();
+		XmlPath xmlPath = new XmlPath(googleMapsResponseString).setRootPath("PlaceSearchResponse");
+		String status = xmlPath.get("status");
+		List<Object> resultsNames = xmlPath.getList("result.name");
+		System.out.println(status);
+		System.out.println(resultsNames);
 	}
 
 }
